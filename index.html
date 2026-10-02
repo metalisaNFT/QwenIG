@@ -1,0 +1,895 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <meta name="theme-color" content="#181b19" />
+    <title>Studio Zero — A place for ideas</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='10' fill='%23181b19'/%3E%3Ccircle cx='20' cy='20' r='12' fill='none' stroke='%23c9ee91' stroke-width='4'/%3E%3C/svg%3E"
+    />
+  </head>
+  <body>
+    <main class="studio-shell">
+      <header class="topbar">
+        <a class="brand" href="#" aria-label="Studio Zero"
+          ><span class="brand-mark">Ø</span
+          ><span
+            >studio zero<span class="brand-sub">A PLACE FOR IDEAS</span></span
+          ></a
+        ><span class="header-divider"></span>
+        <div class="project-name">
+          <input
+            id="project-title"
+            aria-label="Project name"
+            maxlength="200"
+            value="Untitled canvas"
+          /><span id="save-status">Local workspace</span>
+        </div>
+        <button id="connect-open" class="engine-pill" title="Engine connection">
+          <span class="connection-dot" id="connection-dot"></span
+          ><span class="engine-text"
+            ><b id="connection-label">Your private engine</b
+            ><small id="connection-detail"
+              >Connect when you’re ready to create</small
+            ></span
+          >
+        </button>
+        <div class="top-actions">
+          <button id="new-project" class="quiet">New</button
+          ><button id="open-project" class="quiet">Open</button
+          ><button id="save-project" class="quiet">Save .zero</button
+          ><button id="export-image" class="primary">
+            Export PNG <span>↗</span>
+          </button>
+        </div>
+      </header>
+      <aside class="toolbar" aria-label="Canvas tools">
+        <div class="tool-stack">
+          <button
+            class="tool selected"
+            data-tool="select"
+            title="Select · V"
+            aria-label="Select tool"
+          >
+            ↖</button
+          ><button
+            class="tool"
+            data-tool="hand"
+            title="Pan · H or Space"
+            aria-label="Hand tool"
+          >
+            ✥</button
+          ><span class="tool-divider"></span
+          ><button
+            class="tool"
+            data-tool="note"
+            title="Add a note · N"
+            aria-label="Note tool"
+          >
+            T</button
+          ><button
+            id="add-image"
+            class="tool"
+            title="Import reference"
+            aria-label="Add image"
+          >
+            ▧</button
+          ><button
+            class="tool"
+            data-tool="text"
+            title="Add editable text · T"
+            aria-label="Text tool"
+          >
+            T</button
+          ><button
+            id="add-prompt"
+            class="tool"
+            title="Save prompt as a canvas idea"
+            aria-label="Add prompt layer"
+          >
+            ✦</button
+          ><span class="tool-divider"></span
+          ><button
+            id="brush-image"
+            class="tool"
+            title="Paint on selected image"
+            aria-label="Brush"
+          >
+            ⌁</button
+          ><button
+            id="erase-image"
+            class="tool"
+            title="Erase on selected image"
+            aria-label="Eraser"
+          >
+            ◒
+          </button>
+        </div>
+        <div class="tool-stack paint-tool-stack" aria-label="Painting tools">
+          <button
+            id="new-paint-layer"
+            class="tool"
+            title="New paint layer · Ctrl+Shift+N"
+            aria-label="New paint layer"
+          >
+            ＋
+          </button>
+          <button
+            id="eyedropper-image"
+            class="tool"
+            title="Eyedropper · I"
+            aria-label="Eyedropper"
+          >
+            ⌾
+          </button>
+          <button
+            id="bucket-image"
+            class="tool"
+            title="Paint bucket · K"
+            aria-label="Paint bucket"
+          >
+            ▰
+          </button>
+          <button
+            id="gradient-image"
+            class="tool"
+            title="Gradient · G"
+            aria-label="Gradient"
+          >
+            ▨
+          </button>
+          <button
+            id="shape-image"
+            class="tool"
+            title="Shapes · U"
+            aria-label="Shapes"
+          >
+            □
+          </button>
+        </div>
+        <button id="shortcuts" class="tool help" title="Keyboard shortcuts">
+          ?
+        </button>
+      </aside>
+      <aside class="layers-dock" id="layers-dock" aria-label="Layers">
+        <div class="dock-heading">
+          <span class="eyebrow">LAYERS <span id="layers-badge">0</span></span
+          ><button
+            id="group-layers"
+            class="quiet tiny"
+            title="Group selected layers"
+          >
+            ＋ Group</button
+          ><button
+            id="layers-close"
+            class="quiet tiny"
+            title="Hide layers"
+            aria-label="Hide layers"
+          >
+            ⟨
+          </button>
+        </div>
+        <div id="layer-list"></div>
+        <p id="layers-empty" class="panel-empty">
+          A space for every piece of your idea.<br />Add an image or a note to
+          begin.
+        </p>
+      </aside>
+      <section class="canvas-panel">
+        <div class="canvas-top">
+          <button
+            id="layers-toggle"
+            class="quiet tiny"
+            aria-controls="layers-dock"
+            title="Show or hide layers"
+          >
+            ☰ Layers</button
+          ><span class="eyebrow"
+            >WORKSPACE <span class="faint">/</span>
+            <span id="layer-count">0 LAYERS</span></span
+          ><button id="grid-toggle" class="quiet tiny" aria-pressed="true">
+            ⋮⋮ Grid
+          </button>
+        </div>
+        <div id="viewport" tabindex="0" aria-label="Infinite canvas">
+          <div id="world"></div>
+          <div id="marquee" hidden></div>
+          <div id="empty-state">
+            <div class="empty-orbit"><span>✦</span></div>
+            <span class="eyebrow">EVERYTHING STARTS SOMEWHERE</span>
+            <h1>Make room<br />for your next idea.</h1>
+            <p>
+              A canvas without edges. Images, references,<br />and thoughts —
+              all in one place.
+            </p>
+            <div class="empty-actions">
+              <button id="empty-paint" class="primary">
+                ＋ Start painting
+              </button>
+              <button id="empty-generate" class="primary">
+                ✦ Create an image</button
+              ><button id="empty-import" class="quiet">
+                Import a reference ↗
+              </button>
+            </div>
+            <span class="empty-foot">OR DROP AN IMAGE ANYWHERE</span>
+          </div>
+        </div>
+        <div class="canvas-bottom">
+          <span id="canvas-hint"
+            >Space to pan <i>·</i> Scroll to zoom <i>·</i> Shift to select</span
+          >
+          <div class="zoom-controls">
+            <button id="zoom-out" aria-label="Zoom out">−</button
+            ><button id="zoom-value" title="Reset zoom">100%</button
+            ><button id="zoom-in" aria-label="Zoom in">+</button><span></span
+            ><button id="fit">Fit</button>
+          </div>
+        </div>
+      </section>
+      <aside class="inspector">
+        <div class="tabs" role="tablist">
+          <button
+            id="tab-create"
+            class="active"
+            role="tab"
+            aria-selected="true"
+          >
+            Create</button
+          ><button id="tab-layers" role="tab" aria-selected="false">Edit</button
+          ><button id="tab-animate" role="tab" aria-selected="false">
+            Animate</button
+          ><button id="tab-audio" role="tab" aria-selected="false">Audio</button
+          ><button id="tab-history" role="tab" aria-selected="false">
+            History
+          </button>
+        </div>
+        <section id="panel-create" class="tab-panel">
+          <div class="section-heading">
+            <span class="eyebrow">YOUR NEXT IMAGE</span
+            ><span class="accent">✦</span>
+          </div>
+          <form id="generation-form">
+            <label class="field-label" for="prompt">The idea</label>
+            <div class="prompt-wrap">
+              <textarea
+                id="prompt"
+                rows="5"
+                maxlength="20000"
+                placeholder="A quiet brutalist greenhouse at dusk. Warm light through frosted glass, soft grain, editorial photography…"
+              ></textarea
+              ><span class="prompt-caption"
+                >Be descriptive. Follow your curiosity.</span
+              >
+            </div>
+            <details class="negative">
+              <summary>Negative prompt <span>+</span></summary>
+              <textarea
+                id="negative-prompt"
+                rows="2"
+                aria-label="Negative prompt"
+                placeholder="What should stay out of the image?"
+                maxlength="20000"
+              ></textarea>
+            </details>
+            <details class="create-group" id="size-group" open>
+              <summary>
+                Size <span id="dimension-label">1024 × 1024</span>
+              </summary>
+              <label class="resolution-label"
+                >Generation resolution
+                <select id="generation-resolution">
+                  <option value="1024">Standard · 1K</option>
+                  <option value="1536">High · 1.5K</option>
+                  <option value="2048">Maximum · 2K</option>
+                  <option value="custom">Custom dimensions</option>
+                </select>
+              </label>
+              <p class="subtle" id="resolution-hint">
+                Original pixels are preserved on the canvas and in exports.
+              </p>
+              <div class="ratios">
+                <button
+                  type="button"
+                  class="ratio active"
+                  data-width="1024"
+                  data-height="1024"
+                >
+                  <i class="square"></i>Square<span>1:1</span></button
+                ><button
+                  type="button"
+                  class="ratio"
+                  data-width="1344"
+                  data-height="768"
+                >
+                  <i class="wide"></i>Landscape<span>7:4</span></button
+                ><button
+                  type="button"
+                  class="ratio"
+                  data-width="768"
+                  data-height="1344"
+                >
+                  <i class="tall"></i>Portrait<span>4:7</span>
+                </button>
+              </div>
+              <label class="check transparent-check"
+                ><input type="checkbox" id="transparent" /> Transparent
+                background
+                <small
+                  >RGBA PNG · for sprites, stickers and cut-outs</small
+                ></label
+              >
+            </details>
+            <details class="create-group" id="guide-group">
+              <summary>
+                Guide with pictures
+                <span id="guide-summary">pose · references</span>
+              </summary>
+              <section class="references-panel" aria-label="Reference images">
+                <div class="field-heading">
+                  <label>Reference images</label
+                  ><span id="reference-count">0 / 3</span>
+                </div>
+                <div class="reference-actions">
+                  <button type="button" id="add-reference" class="quiet">
+                    ＋ Add images</button
+                  ><button type="button" id="reference-selection" class="quiet">
+                    Use selected layer
+                  </button>
+                </div>
+                <div id="reference-list"></div>
+                <p class="subtle" id="reference-hint">
+                  Add up to three images. Describe what to keep or change in
+                  your prompt.
+                </p>
+              </section>
+            </details>
+            <details class="advanced">
+              <summary>Fine-tune <span>⌄</span></summary>
+              <div class="input-grid">
+                <label
+                  >Width<input
+                    id="width"
+                    type="number"
+                    min="256"
+                    max="2048"
+                    step="32"
+                    value="1024" /></label
+                ><label
+                  >Height<input
+                    id="height"
+                    type="number"
+                    min="256"
+                    max="2048"
+                    step="32"
+                    value="1024" /></label
+                ><label
+                  >Steps<input
+                    id="steps"
+                    type="number"
+                    min="1"
+                    max="100"
+                    value="28" /></label
+                ><label
+                  >Guidance<input
+                    id="guidance"
+                    type="number"
+                    min="0"
+                    max="20"
+                    step="0.1"
+                    value="6"
+                /></label>
+              </div>
+              <label class="seed-label"
+                >Seed <span>−1 = random</span
+                ><input
+                  id="seed"
+                  type="number"
+                  min="-1"
+                  max="2147483647"
+                  value="-1"
+              /></label>
+            </details>
+            <div class="generate-dock">
+              <button id="generate" class="generate" type="submit">
+                <span>✦</span> Generate image <span>↗</span>
+              </button>
+              <div id="job-panel" hidden>
+                <div class="job-line">
+                  <span id="job-label">Waiting…</span
+                  ><button type="button" id="cancel-job">Cancel</button>
+                </div>
+                <progress id="job-progress" max="100"></progress>
+              </div>
+              <p class="under-button">
+                Your result becomes a layer on the canvas.
+              </p>
+            </div>
+          </form>
+        </section>
+        <section id="panel-layers" class="tab-panel" hidden>
+          <section id="selection-panel" hidden>
+            <div class="section-heading">
+              <span class="eyebrow">SELECTION</span
+              ><span id="selection-count"></span>
+            </div>
+            <label>Layer name<input id="layer-name" maxlength="200" /></label
+            ><label id="note-edit-label" hidden
+              >Text<textarea
+                id="note-text"
+                rows="4"
+                maxlength="20000"
+              ></textarea>
+            </label>
+            <div id="image-edit-actions" hidden>
+              <p class="subtle" id="image-resolution"></p>
+              <div class="edit-card pixels-card">
+                <div class="card-heading">
+                  <span class="eyebrow">PIXELS</span
+                  ><span class="card-tag">new version · original kept</span>
+                </div>
+                <button id="edit-image" class="primary full">
+                  Edit image pixels ↗
+                </button>
+                <p class="subtle">
+                  Select · crop · paint · gradient · shapes · raster text
+                </p>
+                <div class="selection-actions">
+                  <button id="view-pixels">View at 100%</button
+                  ><button id="restore-original">Restore original</button>
+                </div>
+              </div>
+              <details id="adjustments-card" class="edit-card">
+                <summary class="card-heading">
+                  <span class="eyebrow">ADJUSTMENTS</span
+                  ><span class="card-tag" id="adjustments-state">live</span>
+                </summary>
+                <p class="subtle">
+                  Changes how this layer looks. Pixels stay untouched; saves and
+                  PNG exports include it. Double-click a slider to reset it.
+                </p>
+                <div id="adjustment-sliders"></div>
+                <div class="selection-actions">
+                  <button id="toggle-adjustments">Hide adjustments</button
+                  ><button id="reset-adjustments">Reset all</button>
+                </div>
+              </details>
+              <div class="edit-card layer-mask-controls" id="mask-card">
+                <div class="card-heading">
+                  <span class="eyebrow">LAYER MASK</span
+                  ><span class="card-tag mask-tag">image pixels untouched</span>
+                </div>
+                <button id="remove-background" class="primary full" disabled>
+                  ✦ Remove background
+                </button>
+                <p class="subtle" id="remove-background-hint"></p>
+                <div class="mask-summary">
+                  <button
+                    id="mask-preview"
+                    class="mask-preview"
+                    title="Edit mask"
+                    aria-label="Edit layer mask"
+                    hidden
+                  >
+                    <img alt="" />
+                  </button>
+                  <p class="subtle" id="mask-status"></p>
+                </div>
+                <button id="edit-mask" class="quiet full">
+                  Add layer mask ↗
+                </button>
+                <div id="mask-properties" hidden>
+                  <label
+                    >Feather <output id="mask-feather-value">0 px</output
+                    ><input
+                      id="mask-feather"
+                      type="range"
+                      min="0"
+                      max="150"
+                      value="0"
+                      title="Softens the whole mask edge. Double-click to reset."
+                  /></label>
+                  <label
+                    >Density <output id="mask-density-value">100%</output
+                    ><input
+                      id="mask-density"
+                      type="range"
+                      min="0"
+                      max="100"
+                      value="100"
+                      title="Lower to let hidden areas show through. Double-click to reset."
+                  /></label>
+                  <p class="subtle">
+                    Feather and density are live: change them any time.
+                  </p>
+                </div>
+                <div class="selection-actions">
+                  <button id="toggle-mask" disabled>Disable mask</button>
+                  <button id="remove-mask" disabled>Remove mask</button>
+                  <button
+                    id="invert-mask"
+                    disabled
+                    title="Swap what is hidden and visible"
+                  >
+                    Invert mask
+                  </button>
+                </div>
+              </div>
+            </div>
+            <section id="typography-controls" hidden>
+              <span class="eyebrow">EDITABLE TEXT</span>
+              <div class="input-grid">
+                <label
+                  >Font<select id="text-font">
+                    <option value="Arial">Sans serif</option>
+                    <option value="Georgia">Serif</option>
+                    <option value="Courier New">Monospace</option>
+                  </select></label
+                ><label
+                  >Font size<input
+                    id="text-size"
+                    type="number"
+                    min="8"
+                    max="512"
+                    value="64" /></label
+                ><label
+                  >Text color<input
+                    id="text-color"
+                    type="color"
+                    value="#e8eae4" /></label
+                ><label
+                  >Line spacing<input
+                    id="text-leading"
+                    type="number"
+                    min="0.8"
+                    max="3"
+                    step="0.1"
+                    value="1.2"
+                /></label>
+              </div>
+              <div class="type-toggles">
+                <label class="check-label"
+                  ><input id="text-bold" type="checkbox" /> Bold</label
+                ><label class="check-label"
+                  ><input id="text-italic" type="checkbox" /> Italic</label
+                >
+              </div>
+              <label
+                >Text alignment<select id="text-align">
+                  <option value="left">Left</option>
+                  <option value="center">Center</option>
+                  <option value="right">Right</option>
+                </select></label
+              >
+              <p class="subtle">
+                Text stays editable. Resize its box to change wrapping; increase
+                its height to reveal more lines.
+              </p>
+            </section>
+            <details class="props-group" id="layout-props">
+              <summary>Position, size &amp; look <span>⌄</span></summary>
+              <div class="input-grid">
+                <label>X<input id="layer-x" type="number" /></label
+                ><label>Y<input id="layer-y" type="number" /></label
+                ><label
+                  >Width<input
+                    id="layer-width"
+                    type="number"
+                    min="16"
+                    max="32768" /></label
+                ><label
+                  >Height<input
+                    id="layer-height"
+                    type="number"
+                    min="16"
+                    max="32768"
+                /></label>
+              </div>
+              <section class="layer-transform-controls">
+                <label
+                  >Layer rotation (degrees)<input
+                    id="layer-rotation"
+                    type="number"
+                    min="-360"
+                    max="360"
+                    step="1"
+                    value="0"
+                /></label>
+                <div class="selection-actions">
+                  <button id="rotate-layer-left">Rotate −90°</button
+                  ><button id="rotate-layer-right">Rotate +90°</button
+                  ><button id="flip-layer-x">Flip horizontal</button
+                  ><button id="flip-layer-y">Flip vertical</button>
+                </div>
+                <button id="reset-transform" class="quiet full">
+                  Reset rotation &amp; flips
+                </button>
+              </section>
+              <div class="selection-actions">
+                <button id="back">↓ Back</button
+                ><button id="front">↑ Forward</button
+                ><button id="duplicate">Duplicate</button
+                ><button id="export-selection">Export PNG</button>
+              </div>
+              <div class="appearance-controls">
+                <label
+                  >Opacity <output id="opacity-value">100%</output
+                  ><input
+                    id="layer-opacity"
+                    type="range"
+                    min="0"
+                    max="100"
+                    value="100"
+                /></label>
+                <label
+                  >Blend<select id="layer-blend">
+                    <option value="normal">Normal</option>
+                    <option value="multiply">Multiply</option>
+                    <option value="screen">Screen</option>
+                    <option value="overlay">Overlay</option>
+                    <option value="darken">Darken</option>
+                    <option value="lighten">Lighten</option>
+                    <option value="color-dodge">Color dodge</option>
+                    <option value="color-burn">Color burn</option>
+                    <option value="hard-light">Hard light</option>
+                    <option value="soft-light">Soft light</option>
+                    <option value="difference">Difference</option>
+                    <option value="exclusion">Exclusion</option>
+                    <option value="hue">Hue</option>
+                    <option value="saturation">Saturation</option>
+                    <option value="color">Color</option>
+                    <option value="luminosity">Luminosity</option>
+                  </select></label
+                >
+                <div
+                  id="note-colors"
+                  class="note-colors"
+                  aria-label="Note color"
+                >
+                  <button
+                    data-color="sage"
+                    aria-label="Sage note"
+                    title="Sage"
+                  ></button
+                  ><button
+                    data-color="sand"
+                    aria-label="Sand note"
+                    title="Sand"
+                  ></button
+                  ><button
+                    data-color="rose"
+                    aria-label="Rose note"
+                    title="Rose"
+                  ></button
+                  ><button
+                    data-color="sky"
+                    aria-label="Sky note"
+                    title="Sky"
+                  ></button>
+                </div>
+                <label class="check-label"
+                  ><input id="lock-ratio" type="checkbox" checked /> Keep image
+                  proportions</label
+                >
+                <div class="selection-actions">
+                  <button id="original-size">Original size</button
+                  ><button id="save-original">Save original</button>
+                </div>
+              </div>
+              <div id="alignment-panel">
+                <span class="eyebrow">ALIGN SELECTION</span>
+                <div class="alignment-buttons">
+                  <button
+                    data-align="left"
+                    title="Align left"
+                    aria-label="Align left"
+                  >
+                    ⊢</button
+                  ><button
+                    data-align="center"
+                    title="Align horizontal centers"
+                    aria-label="Align horizontal centers"
+                  >
+                    ↔</button
+                  ><button
+                    data-align="right"
+                    title="Align right"
+                    aria-label="Align right"
+                  >
+                    ⊣</button
+                  ><button
+                    data-align="top"
+                    title="Align top"
+                    aria-label="Align top"
+                  >
+                    ⊤</button
+                  ><button
+                    data-align="middle"
+                    title="Align vertical centers"
+                    aria-label="Align vertical centers"
+                  >
+                    ↕</button
+                  ><button
+                    data-align="bottom"
+                    title="Align bottom"
+                    aria-label="Align bottom"
+                  >
+                    ⊥
+                  </button>
+                </div>
+              </div>
+            </details>
+            <button id="ungroup" class="quiet full">Remove from group</button
+            ><button id="delete-layer" class="danger full">
+              Delete selection
+            </button>
+            <details id="metadata-panel">
+              <summary>Generation details</summary>
+              <pre id="metadata"></pre>
+              <button id="reuse-prompt" class="quiet full">
+                Use these settings
+              </button>
+            </details>
+          </section>
+          <p id="edit-empty" class="panel-empty">
+            Select a layer on the canvas or in Layers<br />to edit it here.
+          </p>
+        </section>
+        <section
+          id="panel-animate"
+          class="tab-panel"
+          hidden
+          aria-label="Video and sprites"
+        ></section>
+        <section
+          id="panel-audio"
+          class="tab-panel"
+          hidden
+          aria-label="Voice, music and transcription"
+        ></section>
+        <section id="panel-history" class="tab-panel" hidden>
+          <div class="section-heading">
+            <span class="eyebrow">YOUR EXPLORATIONS</span
+            ><span id="history-count"></span>
+          </div>
+          <p class="subtle">
+            Every result, kept with its original idea. Click to place another
+            copy on the canvas.
+          </p>
+          <div id="gallery"></div>
+        </section>
+      </aside>
+    </main>
+    <dialog id="connection-dialog">
+      <form id="connection-form">
+        <div class="dialog-heading">
+          <div>
+            <span class="eyebrow">STUDIO CONNECTION</span>
+            <h2>Your private engine.</h2>
+          </div>
+          <button
+            type="button"
+            id="connection-close"
+            class="quiet"
+            aria-label="Close connection"
+          >
+            ✕
+          </button>
+        </div>
+        <p>
+          Connect your running Studio Zero service. Images and prompts go
+          directly to your engine.
+        </p>
+        <label
+          >Service address<input
+            id="service-url"
+            type="url"
+            placeholder="https://your-private-service.example"
+            required
+            autocomplete="off" /></label
+        ><label
+          >Access key<input
+            id="service-token"
+            type="password"
+            placeholder="Key from your service session"
+            required
+            autocomplete="off"
+        /></label>
+        <p class="subtle">
+          Kept in memory for this tab only. Never included in project files.
+        </p>
+        <p id="connection-error" role="alert"></p>
+        <div class="dialog-actions">
+          <button type="button" id="disconnect" class="quiet">Disconnect</button
+          ><button type="submit" id="connection-submit" class="primary">
+            Connect engine ↗
+          </button>
+        </div>
+      </form>
+    </dialog>
+    <dialog id="help-dialog">
+      <span class="eyebrow">MAKE YOURSELF AT HOME</span>
+      <h2>A few useful shortcuts.</h2>
+      <dl>
+        <dt>V / H / N / T</dt>
+        <dd>Select / hand / note / text</dd>
+        <dt>Space + drag</dt>
+        <dd>Pan anywhere</dd>
+        <dt>Scroll</dt>
+        <dd>Zoom at the pointer</dd>
+        <dt>Shift + click</dt>
+        <dd>Add to selection</dd>
+        <dt>Drag blank canvas</dt>
+        <dd>Select an area</dd>
+        <dt>Ctrl / ⌘ + Z</dt>
+        <dd>Undo</dd>
+        <dt>Ctrl / ⌘ + Shift + Z</dt>
+        <dd>Redo</dd>
+        <dt>Ctrl / ⌘ + S</dt>
+        <dd>Download project</dd>
+        <dt>Delete</dt>
+        <dd>Delete unlocked layers</dd>
+        <dt>Arrow / Shift + arrow</dt>
+        <dd>Move 1 / 10 pixels</dd>
+        <dt>Ctrl / ⌘ + D</dt>
+        <dd>Duplicate selection</dd>
+        <dt>Ctrl / ⌘ + A</dt>
+        <dd>Select visible layers</dd>
+        <dt>F / Shift + F</dt>
+        <dd>Fit canvas / selection</dd>
+        <dt>[ / ]</dt>
+        <dd>Move backward / forward</dd>
+        <dt>Right-click a layer</dt>
+        <dd>Quick layer actions</dd>
+        <dt>Double-click a note</dt>
+        <dd>Edit its text</dd>
+        <dt>In the image / mask editor</dt>
+        <dd>M select · B brush or Reveal · E eraser or Hide</dd>
+        <dt>Ctrl / ⌘ + Shift + N</dt>
+        <dd>New paint layer</dd>
+        <dt>I / K / G / U</dt>
+        <dd>Eyedropper / bucket / gradient / shapes</dd>
+        <dt>L / C (editor)</dt>
+        <dd>Lasso / crop selection</dd>
+        <dt>Shift + drag (editor)</dt>
+        <dd>Square / circle / constrained gradient or line</dd>
+        <dt>Alt + click (editor)</dt>
+        <dd>Sample foreground color from pixels</dd>
+        <dt>X</dt>
+        <dd>Swap colors in pixels; swap Reveal / Hide in masks</dd>
+        <dt>D (editor)</dt>
+        <dd>Reset colors to black and white</dd>
+        <dt>[ / ] · Shift + [ / ]</dt>
+        <dd>Brush size · brush hardness</dd>
+        <dt>Ctrl / ⌘ + A · D · Shift + I</dt>
+        <dd>Select all · deselect · invert (editor)</dd>
+        <dt>Double-click a slider</dt>
+        <dd>Reset an adjustment or mask property</dd>
+      </dl>
+      <form method="dialog"><button class="primary full">Got it</button></form>
+    </dialog>
+    <div id="toast" role="status" aria-live="polite"></div>
+    <input
+      id="reference-upload"
+      type="file"
+      accept="image/png,image/jpeg,image/webp"
+      multiple
+      hidden
+    />
+    <input
+      id="image-upload"
+      type="file"
+      accept="image/png,image/jpeg,image/webp"
+      multiple
+      hidden
+    /><input
+      id="project-import"
+      type="file"
+      accept=".zero,application/json"
+      hidden
+    />
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

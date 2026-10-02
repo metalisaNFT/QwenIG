@@ -1,0 +1,96 @@
+/* Audio tab and the prompt helper buttons — shares the studio's tokens (--accent, --line, --muted). */
+.assist-row {
+  display: inline-flex;
+  gap: 6px;
+}
+.assist-button {
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid #4b5843;
+  background: transparent;
+  color: var(--accent);
+  font-size: 10px;
+  line-height: 1.4;
+}
+.assist-button:hover:not(:disabled) {
+  background: #2c3527;
+}
+.assist-button.undo {
+  color: #b9c1b4;
+  border-color: #42493f;
+}
+.prompt-heading {
+  margin-bottom: 8px;
+}
+.prompt-heading label {
+  color: #c0cbb6;
+  font-size: 11px;
+}
+#panel-audio textarea,
+#panel-audio select {
+  width: 100%;
+  margin-top: 8px;
+}
+#panel-audio .ai-row label select {
+  margin-top: 0;
+}
+#panel-audio .field-heading {
+  margin: 0;
+}
+#panel-audio .generate {
+  margin-top: 14px;
+  width: 100%;
+}
+#panel-audio .subtle {
+  text-decoration: none;
+  line-height: 1.6;
+  color: #8b968a;
+}
+#panel-audio textarea:disabled {
+  opacity: 0.45;
+}
+.audio-heading {
+  margin-top: 28px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.audio-card {
+  border-left: 3px solid #8fd3c7;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.audio-card strong {
+  font-size: 11px;
+  font-weight: 600;
+  color: #dae9cc;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.audio-card small {
+  font-size: 9px;
+  letter-spacing: 0.4px;
+  color: #7d9070;
+}
+.audio-card .subtle {
+  margin: 0;
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+.audio-card audio {
+  width: 100%;
+  height: 34px;
+  color-scheme: dark;
+}
+.audio-card .selection-actions {
+  flex-wrap: wrap;
+}
+.audio-card .selection-actions button {
+  padding: 6px 8px;
+  font-size: 10px;
+}
+#transcript {
+  margin-top: 10px;
+  font-size: 11px;
+}

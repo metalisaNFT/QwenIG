@@ -1,0 +1,57 @@
+/* Pose editor, Create → Pose and the upscale card — shares the studio's tokens. */
+.pose-dialog {
+  width: min(620px, 94vw);
+}
+.pose-stage {
+  display: grid;
+  place-items: center;
+  margin-top: 12px;
+  padding: 10px;
+  border-radius: 8px;
+  background: #151a14;
+}
+.pose-canvas {
+  max-width: 100%;
+  border-radius: 4px;
+  touch-action: none;
+}
+.pose-dialog .ai-row select {
+  flex: 1;
+}
+.pose-panel {
+  margin: 22px 0 6px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.pose-panel .field-heading {
+  margin-bottom: 10px;
+}
+.pose-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.pose-thumb {
+  flex: none;
+  border-radius: 4px;
+  border: 1px solid #3b4339;
+}
+.pose-controls {
+  flex: 1;
+}
+.pose-controls .check {
+  margin: 0 0 8px;
+}
+.pose-panel .subtle {
+  margin: 10px 0 0;
+}
+.upscale-card {
+  border-left: 3px solid #f0a6c4;
+}
+.upscale-card .ai-row .subtle {
+  flex: 1;
+  margin: 0;
+}
+.upscale-card .ai-row button {
+  min-width: 52px;
+}

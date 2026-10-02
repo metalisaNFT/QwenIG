@@ -1,0 +1,259 @@
+/* AI edit, pixel art, video and sprites — shares the studio's tokens (--accent, --line, --muted). */
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 0;
+  font-size: 10px;
+  color: #b9c1b4;
+}
+.check input {
+  width: 13px;
+  height: 13px;
+  margin: 0;
+  accent-color: var(--accent);
+  flex: none;
+}
+.transparent-check {
+  flex-wrap: wrap;
+  margin: 14px 0 4px;
+}
+.transparent-check small {
+  flex-basis: 100%;
+  padding-left: 21px;
+  font-size: 8px;
+  color: #708162;
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 10px;
+}
+.chip {
+  padding: 6px 9px;
+  border-radius: 999px;
+  border: 1px solid #42493f;
+  background: transparent;
+  color: #c4cbbb;
+  font-size: 10px;
+}
+.chip.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #26351c;
+  font-weight: 600;
+}
+.ai-edit-card {
+  border-left: 3px solid #9fd0ef;
+}
+.pixel-card {
+  border-left: 3px solid #e9c46a;
+}
+.ai-edit-card textarea {
+  margin-top: 8px;
+}
+.ai-edit-card .subtle,
+#panel-animate .subtle {
+  text-decoration: none;
+  line-height: 1.6;
+  color: #8b968a;
+}
+.ai-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+#ai-edit-amount {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 72px;
+}
+.pixel-dialog .dialog-heading {
+  display: block;
+}
+.chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.ai-row > select,
+.ai-row label select,
+.ai-row label input:not([type="checkbox"]) {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 8px;
+  margin: 0;
+}
+.ai-row label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  flex: 1;
+}
+.ai-row .check {
+  margin: 0;
+  flex: none;
+}
+label.ai-slider {
+  display: grid;
+  grid-template-columns: auto 1fr 36px;
+  align-items: center;
+  gap: 8px;
+}
+.ai-slider span {
+  text-align: right;
+  color: var(--accent);
+}
+.inline-job {
+  margin-top: 10px;
+}
+.inline-job .job-line button {
+  background: transparent;
+  color: #c0d7ab;
+  text-decoration: underline;
+  border: 0;
+}
+#panel-animate textarea,
+#panel-animate select {
+  width: 100%;
+  margin-top: 8px;
+}
+#panel-animate .input-grid label select {
+  margin-top: 8px;
+}
+#panel-animate .generate {
+  margin-top: 16px;
+  width: 100%;
+}
+.sprite-heading {
+  margin-top: 28px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.sprite-card {
+  border-left: 3px solid #c9a4ef;
+}
+.sprite-toggle {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  background: transparent;
+  text-align: left;
+  padding: 0;
+}
+.sprite-toggle small {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 9px;
+}
+.sprite-preview {
+  display: block;
+  width: 160px;
+  height: 160px;
+  margin: 10px auto 0;
+  border-radius: 6px;
+  background:
+    repeating-conic-gradient(#232822 0% 25%, #1b1f1a 0% 50%) 50% / 16px 16px;
+}
+.crisp,
+.sprite-preview.crisp {
+  image-rendering: pixelated;
+}
+.frame-strip {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 10px 0 4px;
+}
+.frame-thumb {
+  position: relative;
+  flex: none;
+  width: 52px;
+  height: 52px;
+  padding: 3px;
+  border: 1px solid #42493f;
+  border-radius: 5px;
+  background: repeating-conic-gradient(#232822 0% 25%, #1b1f1a 0% 50%) 50% / 10px 10px;
+}
+.frame-thumb.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.frame-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.frame-thumb small {
+  position: absolute;
+  right: 3px;
+  bottom: 2px;
+  font-size: 8px;
+  color: #c4cbbb;
+  text-shadow: 0 1px 2px #000;
+}
+.sprite-card .selection-actions {
+  margin-top: 8px;
+}
+.sprite-card .danger {
+  margin-top: 14px;
+}
+.pixel-dialog {
+  width: min(760px, 94vw);
+}
+.pixel-previews {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 12px;
+}
+.pixel-previews figure {
+  margin: 0;
+  display: grid;
+  place-items: center;
+  min-height: 200px;
+  border-radius: 8px;
+  background: repeating-conic-gradient(#2c3529 0% 25%, #232b20 0% 50%) 50% / 16px 16px;
+}
+.pixel-preview {
+  max-width: 100%;
+  max-height: 320px;
+}
+.pixel-previews figcaption {
+  font-size: 9px;
+  color: #9aae8b;
+  padding: 6px;
+}
+.pixel-controls {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px 14px;
+}
+.pixel-controls label {
+  margin-top: 12px;
+}
+.pixel-controls select,
+.pixel-controls input {
+  width: 100%;
+  margin-top: 6px;
+}
+.video-item video {
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  display: block;
+}
+.item video {
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  display: block;
+  pointer-events: none;
+}
+.item.selected video {
+  pointer-events: auto;
+}

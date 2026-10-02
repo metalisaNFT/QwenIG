@@ -1,0 +1,914 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Studio Zero editor checks</title>
+  </head>
+  <body style="padding: 24px; overflow: auto">
+    <h1>Image workshop browser checks</h1>
+    <p id="result">Running…</p>
+    <ul id="checks"></ul>
+    <button id="open" class="primary">Open test image in editor</button>
+    <button id="open-mask" class="primary">Open test mask</button>
+    <p id="saved" role="status">No edits saved</p>
+    <img id="output" alt="Edited test image" style="max-width: 512px" />
+    <script type="module">
+      import "../styles.css";
+      import "../src/workshop.css";
+      import {
+        loadAssetImage,
+        maskSurface,
+        maskedImage,
+        transformMask,
+      } from "../src/masking.ts";
+      import {
+        applyOperation,
+        renderEdits,
+        polygonSelection,
+      } from "../src/image-editing.ts";
+      import { openImageEditor } from "../src/image-editor.ts";
+      import { exportPNG, nativeExportScale } from "../src/export.ts";
+      import {
+        adjustRGB,
+        adjustmentFilter,
+        neutralAdjustments,
+      } from "../src/adjustments.ts";
+      import { effectiveMask } from "../src/masking.ts";
+      import { invertMask, maskFromMatte } from "../src/background.ts";
+      import { blankProject, newLayer } from "../src/model.ts";
+      const c = document.createElement("canvas");
+      c.width = 512;
+      c.height = 320;
+      const ctx = c.getContext("2d");
+      ctx.fillStyle = "#e04030";
+      ctx.fillRect(0, 0, 256, 320);
+      ctx.fillStyle = "#30b060";
+      ctx.fillRect(256, 0, 256, 320);
+      const image = new Image();
+      image.src = c.toDataURL();
+      await image.decode();
+      let failures = 0;
+      function check(name, pass) {
+        const li = document.createElement("li");
+        li.textContent = (pass ? "PASS: " : "FAIL: ") + name;
+        document.querySelector("#checks").append(li);
+        if (!pass) failures++;
+      }
+      function pixel(canvas, x, y) {
+        return [...canvas.getContext("2d").getImageData(x, y, 1, 1).data];
+      }
+      const base = () => renderEdits(image, []);
+      // Painting tools must respect selections, opacity and deterministic replay.
+      const bucket = {
+        type: "bucket",
+        x: 20,
+        y: 20,
+        color: "#0000ff",
+        tolerance: 0,
+        contiguous: true,
+        opacity: 1,
+      };
+      let painted = applyOperation(base(), bucket);
+      check(
+        "bucket replaces only the connected source color",
+        pixel(painted, 20, 20).join() === "0,0,255,255" &&
+          pixel(painted, 400, 20).join() === "48,176,96,255",
+      );
+      painted = applyOperation(base(), {
+        ...bucket,
+        selection: { x: 0, y: 0, width: 100, height: 100 },
+      });
+      check(
+        "bucket is bounded by the current selection",
+        pixel(painted, 20, 20)[2] === 255 && pixel(painted, 200, 20)[0] === 224,
+      );
+      painted = applyOperation(base(), { ...bucket, opacity: 0.5 });
+      check(
+        "bucket opacity blends with existing pixels",
+        Math.abs(pixel(painted, 20, 20)[0] - 112) <= 1 &&
+          pixel(painted, 20, 20)[2] > 150,
+      );
+      const gradient = {
+        type: "gradient",
+        from: [0, 0],
+        to: [512, 0],
+        color: "#000000",
+        endColor: "#ffffff",
+        transparent: false,
+        radial: false,
+        opacity: 1,
+      };
+      painted = applyOperation(base(), gradient);
+      check(
+        "linear gradient has correct direction and endpoints",
+        pixel(painted, 1, 100)[0] < 3 &&
+          pixel(painted, 510, 100)[0] > 252 &&
+          Math.abs(pixel(painted, 256, 100)[0] - 128) <= 1,
+      );
+      painted = applyOperation(base(), {
+        ...gradient,
+        from: [256, 160],
+        to: [356, 160],
+        radial: true,
+      });
+      check(
+        "radial gradient radiates from the drag origin",
+        pixel(painted, 256, 160)[0] < 4 && pixel(painted, 356, 160)[0] > 250,
+      );
+      painted = applyOperation(base(), {
+        ...gradient,
+        color: "#0000ff",
+        transparent: true,
+        selection: { x: 0, y: 0, width: 200, height: 320 },
+      });
+      check(
+        "transparent gradient blends and respects selection",
+        pixel(painted, 1, 50)[2] > 250 &&
+          pixel(painted, 400, 50).join() === "48,176,96,255",
+      );
+      const shape = {
+        type: "shape",
+        from: [30, 30],
+        to: [150, 150],
+        shape: "rectangle",
+        filled: true,
+        color: "#0000ff",
+        size: 8,
+        opacity: 1,
+      };
+      painted = applyOperation(base(), shape);
+      check(
+        "filled rectangle preserves pixels outside the shape",
+        pixel(painted, 80, 80).join() === "0,0,255,255" &&
+          pixel(painted, 20, 20)[0] === 224,
+      );
+      painted = applyOperation(base(), {
+        ...shape,
+        shape: "ellipse",
+        from: shape.to,
+        to: shape.from,
+      });
+      check(
+        "ellipse draws correctly when dragged backwards",
+        pixel(painted, 80, 80)[2] === 255 && pixel(painted, 31, 31)[0] === 224,
+      );
+      painted = applyOperation(base(), { ...shape, filled: false });
+      check(
+        "outlined shape preserves its interior",
+        pixel(painted, 30, 80)[2] === 255 && pixel(painted, 80, 80)[0] === 224,
+      );
+      painted = applyOperation(base(), {
+        ...shape,
+        shape: "line",
+        selection: { x: 0, y: 0, width: 100, height: 320 },
+      });
+      check(
+        "line is clipped by the selection",
+        pixel(painted, 60, 60)[2] === 255 &&
+          pixel(painted, 130, 130)[0] === 224,
+      );
+      const replayed = renderEdits(image, [bucket, shape]);
+      check(
+        "painting operations replay identically for redo",
+        pixel(replayed, 80, 80).join() ===
+          pixel(
+            applyOperation(applyOperation(base(), bucket), shape),
+            80,
+            80,
+          ).join(),
+      );
+      const blendProject = blankProject();
+      const bottom = newLayer("image", 0, 0),
+        top = newLayer("image", 0, 0);
+      bottom.assetId = "bottom";
+      top.assetId = "top";
+      bottom.width = top.width = 512;
+      bottom.height = top.height = 320;
+      top.blendMode = "difference";
+      blendProject.assets.bottom = {
+        id: "bottom",
+        width: 512,
+        height: 320,
+        data: image.src,
+      };
+      blendProject.assets.top = {
+        id: "top",
+        width: 512,
+        height: 320,
+        data: applyOperation(base(), bucket).toDataURL(),
+      };
+      blendProject.layers.push(bottom, top);
+      const blendBlob = await exportPNG(blendProject);
+      const blendImage = new Image();
+      blendImage.src = URL.createObjectURL(blendBlob);
+      await blendImage.decode();
+      const blendCanvas = renderEdits(blendImage, []);
+      check(
+        "difference blend exports painted pixels correctly",
+        pixel(blendCanvas, 20, 20).join() === "224,64,207,255" &&
+          pixel(blendCanvas, 400, 20).join() === "0,0,0,255",
+      );
+      URL.revokeObjectURL(blendImage.src);
+      const softGradient = applyOperation(base(), {
+        ...gradient,
+        color: "#0000ff",
+        endColor: "#0000ff",
+        selection: { x: 0, y: 0, width: 100, height: 320, feather: 20 },
+      });
+      check(
+        "gradient honors feathered selection coverage",
+        pixel(softGradient, 20, 160)[2] === 255 &&
+          pixel(softGradient, 100, 160)[2] > 100 &&
+          pixel(softGradient, 100, 160)[2] < 220 &&
+          pixel(softGradient, 180, 160)[0] === 224,
+      );
+      let out = applyOperation(base(), {
+        type: "crop",
+        rect: { x: 256, y: 0, width: 256, height: 320 },
+      });
+      check(
+        "crop uses source pixels",
+        out.width === 256 && pixel(out, 20, 20)[1] === 176,
+      );
+      out = applyOperation(base(), { type: "rotate", clockwise: true });
+      check(
+        "rotation swaps dimensions and pixels",
+        out.width === 320 &&
+          out.height === 512 &&
+          pixel(out, 20, 20)[0] === 224 &&
+          pixel(out, 20, 400)[1] === 176,
+      );
+      out = applyOperation(base(), { type: "flip", horizontal: true });
+      check("horizontal flip", pixel(out, 20, 20)[1] === 176);
+      out = applyOperation(base(), {
+        type: "adjust",
+        brightness: 100,
+        contrast: 100,
+        saturation: 0,
+      });
+      const p = pixel(out, 20, 20);
+      check("grayscale adjustment", p[0] === p[1] && p[1] === p[2]);
+      out = applyOperation(base(), {
+        type: "stroke",
+        points: [
+          [100, 100],
+          [400, 100],
+        ],
+        size: 40,
+        color: "#0000ff",
+        opacity: 1,
+        erase: false,
+        selection: { x: 0, y: 0, width: 256, height: 320 },
+      });
+      check(
+        "brush respects selection",
+        pixel(out, 120, 100)[2] === 255 && pixel(out, 400, 100)[1] === 176,
+      );
+      out = applyOperation(base(), {
+        type: "stroke",
+        points: [[100, 100]],
+        size: 40,
+        color: "#000",
+        opacity: 1,
+        erase: true,
+      });
+      check("eraser makes transparent pixels", pixel(out, 100, 100)[3] === 0);
+      out = applyOperation(base(), {
+        type: "resize",
+        width: 1024,
+        height: 640,
+      });
+      check("pixel resize", out.width === 1024 && out.height === 640);
+      const project = blankProject(),
+        layer = newLayer("image", 0, 0);
+      layer.assetId = "test";
+      layer.width = 256;
+      layer.height = 160;
+      project.assets.test = {
+        id: "test",
+        data: image.src,
+        width: 512,
+        height: 320,
+      };
+      project.layers.push(layer);
+      const exported = await exportPNG(project, undefined, {
+          scale: nativeExportScale(project),
+        }),
+        decoded = new Image();
+      decoded.src = URL.createObjectURL(exported);
+      await decoded.decode();
+      check(
+        "native export preserves source resolution",
+        decoded.width === 512 && decoded.height === 320,
+      );
+      URL.revokeObjectURL(decoded.src);
+      out = applyOperation(base(), {
+        type: "fill",
+        selection: { x: 0, y: 0, width: 256, height: 320, inverted: true },
+        color: "#0000ff",
+        erase: false,
+      });
+      check(
+        "inverted fill preserves the inside",
+        pixel(out, 20, 20)[0] === 224 && pixel(out, 400, 20)[2] === 255,
+      );
+      out = applyOperation(base(), {
+        type: "fill",
+        selection: { x: 40, y: 40, width: 160, height: 160, ellipse: true },
+        color: "#000000",
+        erase: true,
+      });
+      check(
+        "ellipse clear preserves corners",
+        pixel(out, 120, 120)[3] === 0 && pixel(out, 41, 41)[3] === 255,
+      );
+      out = applyOperation(base(), {
+        type: "adjust",
+        brightness: 100,
+        contrast: 100,
+        saturation: 0,
+        selection: { x: 0, y: 0, width: 256, height: 320 },
+      });
+      check(
+        "adjustments only affect selected pixels",
+        pixel(out, 20, 20)[0] === pixel(out, 20, 20)[1] &&
+          pixel(out, 400, 20)[1] === 176,
+      );
+      out = applyOperation(base(), {
+        type: "crop",
+        rect: { x: 0, y: 0, width: 256, height: 256, ellipse: true },
+      });
+      check(
+        "ellipse crop preserves transparent corners",
+        out.width === 256 &&
+          pixel(out, 0, 0)[3] === 0 &&
+          pixel(out, 128, 128)[3] === 255,
+      );
+      layer.rotation = 90;
+      layer.flipX = true;
+      const rotated = await exportPNG(project, undefined, {
+          scale: nativeExportScale(project),
+        }),
+        rotatedImage = new Image();
+      rotatedImage.src = URL.createObjectURL(rotated);
+      await rotatedImage.decode();
+      const probe = document.createElement("canvas");
+      probe.width = rotatedImage.width;
+      probe.height = rotatedImage.height;
+      probe.getContext("2d").drawImage(rotatedImage, 0, 0);
+      check(
+        "rotated flipped exports have correct bounds and orientation",
+        rotatedImage.width === 320 &&
+          rotatedImage.height === 512 &&
+          pixel(probe, 30, 30)[1] === 176,
+      );
+      URL.revokeObjectURL(rotatedImage.src);
+      const textLayer = newLayer("text", 0, 0);
+      textLayer.text = "Editable text";
+      textLayer.width = 400;
+      textLayer.height = 100;
+      textLayer.textStyle = {
+        ...textLayer.textStyle,
+        color: "#ff0000",
+        bold: true,
+      };
+      const textProject = blankProject();
+      textProject.layers = [textLayer];
+      const textBlob = await exportPNG(textProject),
+        textImage = new Image();
+      textImage.src = URL.createObjectURL(textBlob);
+      await textImage.decode();
+      probe.width = 400;
+      probe.height = 100;
+      probe.getContext("2d").drawImage(textImage, 0, 0);
+      const textPixels = probe
+        .getContext("2d")
+        .getImageData(0, 0, 400, 100).data;
+      let hasText = false;
+      for (let i = 0; i < textPixels.length; i += 4)
+        if (textPixels[i] === 255 && textPixels[i + 3] > 100) hasText = true;
+      check(
+        "editable text exports on transparency",
+        hasText && pixel(probe, 399, 99)[3] === 0,
+      );
+      URL.revokeObjectURL(textImage.src);
+      const triangle = polygonSelection([
+        [0, 0],
+        [256, 0],
+        [0, 256],
+      ]);
+      out = applyOperation(base(), {
+        type: "fill",
+        selection: triangle,
+        color: "white",
+        erase: true,
+      });
+      check(
+        "lasso clearing preserves pixels outside its boundary",
+        pixel(out, 30, 30)[3] === 0 && pixel(out, 220, 220)[3] === 255,
+      );
+      out = applyOperation(base(), { type: "crop", rect: triangle });
+      check(
+        "lasso crop clips the silhouette",
+        out.width === 256 &&
+          pixel(out, 30, 30)[3] === 255 &&
+          pixel(out, 220, 220)[3] === 0,
+      );
+      out = applyOperation(base(), {
+        type: "fill",
+        selection: { ...triangle, inverted: true },
+        color: "white",
+        erase: true,
+      });
+      check(
+        "inverted lasso retains its interior",
+        pixel(out, 30, 30)[3] === 255 && pixel(out, 400, 250)[3] === 0,
+      );
+      const maskCanvas = maskSurface(image);
+      applyOperation(maskCanvas, {
+        type: "fill",
+        selection: { x: 0, y: 0, width: 256, height: 320 },
+        color: "white",
+        erase: true,
+      });
+      let maskAsset = {
+        id: "mask",
+        data: maskCanvas.toDataURL(),
+        width: 512,
+        height: 320,
+      };
+      const maskImage = await loadAssetImage(maskAsset);
+      out = maskedImage(image, maskImage);
+      check(
+        "alpha mask hides without changing original pixels",
+        pixel(out, 30, 30)[3] === 0 &&
+          pixel(out, 400, 30)[1] === 176 &&
+          pixel(base(), 30, 30)[0] === 224,
+      );
+      applyOperation(maskCanvas, {
+        type: "stroke",
+        points: [[60, 60]],
+        size: 40,
+        opacity: 1,
+        erase: false,
+        color: "white",
+      });
+      const revealedMask = await loadAssetImage({
+        ...maskAsset,
+        data: maskCanvas.toDataURL(),
+      });
+      out = maskedImage(image, revealedMask);
+      check(
+        "revealing a mask restores the original color",
+        pixel(out, 60, 60)[0] === 224 &&
+          pixel(out, 60, 60)[3] === 255 &&
+          pixel(out, 150, 150)[3] === 0,
+      );
+      const transformed = transformMask(maskImage, image, [
+        { type: "crop", rect: { x: 128, y: 0, width: 256, height: 320 } },
+        { type: "rotate", clockwise: true },
+      ]);
+      const transformedImage = await loadAssetImage({
+        id: "transformed",
+        ...transformed,
+      });
+      out = renderEdits(transformedImage, []);
+      check(
+        "mask follows image cropping and pixel rotation",
+        out.width === 320 &&
+          out.height === 256 &&
+          pixel(out, 30, 30)[3] === 0 &&
+          pixel(out, 30, 200)[3] === 255,
+      );
+      layer.layerMask = { assetId: "mask", enabled: true };
+      project.assets.mask = maskAsset;
+      async function exportedCanvas() {
+        const blob = await exportPNG(project, undefined, {
+          scale: nativeExportScale(project),
+        });
+        const url = URL.createObjectURL(blob),
+          img = new Image();
+        img.src = url;
+        await img.decode();
+        URL.revokeObjectURL(url);
+        return renderEdits(img, []);
+      }
+      out = await exportedCanvas();
+      check(
+        "rotated flipped PNG respects the layer mask",
+        pixel(out, 30, 30)[1] === 176 && pixel(out, 30, 400)[3] === 0,
+      );
+      layer.layerMask.enabled = false;
+      out = await exportedCanvas();
+      check(
+        "disabled mask exports the full source",
+        pixel(out, 30, 400)[3] === 255,
+      );
+      // ---- Soft brushes and feathered selections ----
+      const near = (a, b, tolerance = 3) => Math.abs(a - b) <= tolerance;
+      const eraseDot = (hardness) =>
+        applyOperation(base(), {
+          type: "stroke",
+          points: [[380, 160]],
+          size: 100,
+          color: "#000",
+          opacity: 1,
+          erase: true,
+          hardness,
+        });
+      out = eraseDot(0);
+      const softAlpha = [0, 20, 35, 45, 60].map(
+        (d) => pixel(out, 380 + d, 160)[3],
+      );
+      check(
+        `soft eraser fades smoothly from centre to edge (${softAlpha.join(", ")})`,
+        // A radius-25 disk blurred at sigma 12.5 leaves exp(-2) alpha at centre.
+        // Expect the analytic coverage rather than an incorrectly opaque centre.
+        near(softAlpha[0], 255 * Math.exp(-2), 4) &&
+          softAlpha[2] > 40 &&
+          softAlpha[2] < 235 &&
+          softAlpha.every((a, i) => !i || a >= softAlpha[i - 1]) &&
+          softAlpha[4] === 255,
+      );
+      const hardAt45 = pixel(eraseDot(1), 425, 160)[3];
+      check(
+        "hard eraser keeps a crisp edge; hardness 1 matches the legacy brush",
+        hardAt45 === 0 &&
+          pixel(eraseDot(1), 432, 160)[3] === 255 &&
+          pixel(eraseDot(undefined), 425, 160)[3] === 0,
+      );
+      out = applyOperation(base(), {
+        type: "stroke",
+        points: [
+          [200, 100],
+          [320, 100],
+        ],
+        size: 60,
+        color: "#0000ff",
+        opacity: 1,
+        erase: false,
+        hardness: 0.2,
+        selection: { x: 0, y: 0, width: 256, height: 320 },
+      });
+      check(
+        "soft brush still respects a hard selection",
+        pixel(out, 250, 100)[2] > 150 && pixel(out, 262, 100)[1] === 176,
+      );
+      const featherRect = { x: 0, y: 0, width: 256, height: 320, feather: 20 };
+      out = applyOperation(base(), {
+        type: "fill",
+        selection: featherRect,
+        color: "#0000ff",
+        erase: false,
+      });
+      const edgeGreen = pixel(out, 256, 160)[1];
+      check(
+        "feathered fill blends across the selection edge",
+        pixel(out, 200, 160)[2] === 255 &&
+          edgeGreen > 60 &&
+          edgeGreen < 120 &&
+          pixel(out, 300, 160)[1] === 176 &&
+          pixel(out, 300, 160)[2] === 96,
+      );
+      check(
+        "feathered selections stay solid where they touch the image border",
+        pixel(out, 0, 0)[2] === 255 && pixel(out, 0, 319)[2] === 255,
+      );
+      out = applyOperation(base(), {
+        type: "fill",
+        selection: {
+          x: 156,
+          y: 60,
+          width: 200,
+          height: 200,
+          ellipse: true,
+          inverted: true,
+          feather: 16,
+        },
+        color: "#000",
+        erase: true,
+      });
+      const ring = pixel(out, 356, 160)[3];
+      check(
+        "inverted feathered ellipse clears outside, keeps the centre, softens the rim",
+        pixel(out, 256, 160)[3] === 255 &&
+          pixel(out, 5, 5)[3] === 0 &&
+          ring > 60 &&
+          ring < 200,
+      );
+      out = applyOperation(base(), {
+        type: "adjust",
+        brightness: 100,
+        contrast: 100,
+        saturation: 0,
+        selection: featherRect,
+      });
+      const mid = pixel(out, 256, 160),
+        inside = pixel(out, 150, 160),
+        outside = pixel(out, 350, 160);
+      check(
+        "feathered adjustments blend into untouched pixels",
+        near(inside[0], inside[1], 1) &&
+          outside[1] === 176 &&
+          outside[0] === 48 &&
+          mid[3] === 255 &&
+          mid[0] !== mid[1],
+      );
+      // ---- Nondestructive adjustments: export matches the reference ----
+      async function exportAdjusted(adjustments) {
+        const p = blankProject(),
+          l = newLayer("image", 0, 0);
+        p.assets.src = { id: "src", data: image.src, width: 512, height: 320 };
+        l.assetId = "src";
+        l.width = 512;
+        l.height = 320;
+        l.adjustments = { ...neutralAdjustments, ...adjustments };
+        p.layers = [l];
+        const blob = await exportPNG(p);
+        const url = URL.createObjectURL(blob),
+          img = new Image();
+        img.src = url;
+        await img.decode();
+        URL.revokeObjectURL(url);
+        return { canvas: renderEdits(img, []), project: p };
+      }
+      const cases = [
+        { brightness: 30, contrast: 40 },
+        { hue: 120, saturation: -40 },
+        { warmth: 80, tint: -50 },
+        { black: 40, white: 220, gamma: 1.8 },
+        {
+          brightness: -20,
+          contrast: 25,
+          saturation: 60,
+          hue: -45,
+          warmth: -30,
+          black: 10,
+          gamma: 0.7,
+        },
+      ];
+      let adjustmentMatches = true;
+      for (const settings of cases) {
+        const { canvas } = await exportAdjusted(settings);
+        for (const [x, rgb] of [
+          [20, [224, 64, 48]],
+          [400, [48, 176, 96]],
+        ]) {
+          const expected = adjustRGB(rgb, {
+            ...neutralAdjustments,
+            ...settings,
+          });
+          const got = pixel(canvas, x, 20);
+          if (!expected.every((v, i) => near(v, got[i], 3))) {
+            adjustmentMatches = false;
+            console.log(
+              "adjustment mismatch",
+              JSON.stringify(settings),
+              expected,
+              got,
+            );
+          }
+        }
+      }
+      check(
+        "PNG export applies layer adjustments like the reference",
+        adjustmentMatches,
+      );
+      const hiddenAdjust = await exportAdjusted({
+        brightness: 80,
+        enabled: false,
+      });
+      check(
+        "hidden adjustments export the untouched pixels",
+        pixel(hiddenAdjust.canvas, 20, 20)[0] === 224 &&
+          hiddenAdjust.project.assets.src.data === image.src,
+      );
+      check(
+        "neutral adjustments need no filter; settings share one SVG filter",
+        adjustmentFilter({ ...neutralAdjustments }) === "none" &&
+          adjustmentFilter({ ...neutralAdjustments, hue: 20 }) ===
+            adjustmentFilter({ ...neutralAdjustments, hue: 20 }) &&
+          document.querySelectorAll("filter[id^=sz-adjust-]").length >= 1,
+      );
+      // ---- Live mask feather and density ----
+      const halfMask = maskSurface(image);
+      applyOperation(halfMask, {
+        type: "fill",
+        selection: { x: 0, y: 0, width: 256, height: 320 },
+        color: "white",
+        erase: true,
+      });
+      let refinedMask = effectiveMask(halfMask, 512, 320, { feather: 20 });
+      const seam = pixel(refinedMask, 256, 160)[3];
+      check(
+        "mask feather softens the seam without fading image borders",
+        seam > 90 &&
+          seam < 170 &&
+          pixel(refinedMask, 200, 160)[3] === 0 &&
+          pixel(refinedMask, 511, 0)[3] === 255,
+      );
+      refinedMask = effectiveMask(halfMask, 512, 320, { density: 0.4 });
+      check(
+        "mask density lets hidden areas show through",
+        near(pixel(refinedMask, 30, 30)[3], 153, 2) &&
+          pixel(refinedMask, 400, 30)[3] === 255,
+      );
+      const maskProject = blankProject(),
+        maskLayer = newLayer("image", 0, 0);
+      const halfMaskData = halfMask.toDataURL();
+      maskProject.assets.src = {
+        id: "src",
+        data: image.src,
+        width: 512,
+        height: 320,
+      };
+      maskProject.assets.m = {
+        id: "m",
+        data: halfMaskData,
+        width: 512,
+        height: 320,
+      };
+      Object.assign(maskLayer, {
+        assetId: "src",
+        width: 512,
+        height: 320,
+        layerMask: { assetId: "m", enabled: true, feather: 20, density: 0.8 },
+        adjustments: { ...neutralAdjustments, saturation: -100 },
+      });
+      maskProject.layers = [maskLayer];
+      const maskBlob = await exportPNG(maskProject),
+        maskUrl = URL.createObjectURL(maskBlob),
+        maskOut = new Image();
+      maskOut.src = maskUrl;
+      await maskOut.decode();
+      URL.revokeObjectURL(maskUrl);
+      out = renderEdits(maskOut, []);
+      const seamPixel = pixel(out, 256, 160),
+        farHidden = pixel(out, 30, 160);
+      check(
+        "export combines adjustments with a feathered, less dense mask",
+        near(farHidden[3], 51, 3) &&
+          seamPixel[3] > 110 &&
+          seamPixel[3] < 200 &&
+          pixel(out, 400, 160)[3] === 255 &&
+          near(pixel(out, 400, 160)[0], pixel(out, 400, 160)[1], 1) &&
+          maskProject.assets.m.data === halfMaskData &&
+          maskProject.assets.src.data === image.src,
+      );
+      // ---- Background removal: engine matte -> layer mask ----
+      const matte = document.createElement("canvas");
+      matte.width = 256;
+      matte.height = 160; // engines may return a smaller matte than the asset
+      const mctx = matte.getContext("2d");
+      mctx.fillStyle = "black";
+      mctx.fillRect(0, 0, 256, 160);
+      mctx.fillStyle = "white";
+      mctx.fillRect(128, 0, 128, 160);
+      const matteBlob = await new Promise((r) => matte.toBlob(r, "image/png"));
+      const aiMask = await maskFromMatte(matteBlob, 512, 320);
+      const aiMaskCanvas = renderEdits(
+        await loadAssetImage({ id: "ai", ...aiMask }),
+        [],
+      );
+      check(
+        "engine matte becomes a full-size alpha mask (white shows, black hides)",
+        aiMask.width === 512 &&
+          aiMask.height === 320 &&
+          pixel(aiMaskCanvas, 30, 30)[3] === 0 &&
+          pixel(aiMaskCanvas, 400, 30).join() === "255,255,255,255",
+      );
+      const inverted = await invertMask({ id: "ai", ...aiMask });
+      const invertedCanvas = renderEdits(
+        await loadAssetImage({ id: "inv", ...inverted }),
+        [],
+      );
+      check(
+        "invert mask swaps hidden and visible areas",
+        pixel(invertedCanvas, 30, 30)[3] === 255 &&
+          pixel(invertedCanvas, 400, 30)[3] === 0,
+      );
+      // ---- Mask editor views (isolated fixture; nothing is saved) ----
+      await openImageEditor(
+        maskProject.assets.src,
+        () => {},
+        "erase",
+        { mask: maskProject.assets.m },
+        { maskFeather: 20, adjustments: maskLayer.adjustments },
+      );
+      const editor = document.querySelector("dialog.image-editor");
+      const editorCanvas = editor.querySelector("canvas");
+      const viewPixel = async (view, x) => {
+        editor.querySelector(`[data-mask-view=${view}]`).click();
+        return pixel(editorCanvas, x, 160);
+      };
+      const resultHidden = await viewPixel("result", 30),
+        maskHidden = await viewPixel("mask", 30),
+        maskShown = await viewPixel("mask", 400),
+        overlayHidden = await viewPixel("overlay", 30),
+        overlayShown = await viewPixel("overlay", 400);
+      check(
+        "mask editor views: adjusted result, grey mask, red overlay unaffected by adjustments",
+        resultHidden[3] === 0 &&
+          maskHidden.join() === "0,0,0,255" &&
+          maskShown.join() === "255,255,255,255" &&
+          overlayHidden[3] === 255 &&
+          overlayHidden[0] > 170 &&
+          overlayHidden[0] - overlayHidden[1] > 100 &&
+          near(overlayShown[0], overlayShown[1], 2) &&
+          editorCanvas.style.filter === "none",
+      );
+      check(
+        "mask editor labels the mode and explains live refinements",
+        editor.classList.contains("mask-mode") &&
+          /never changed/.test(
+            editor.querySelector("[data-mode-badge]").textContent,
+          ) &&
+          !editor.querySelector("[data-context-note]").hidden &&
+          editor.querySelector('[data-tool="erase"]').textContent === "Hide",
+      );
+      check(
+        "pixel-only drawing tools stay hidden in mask sessions",
+        ["bucket", "gradient", "shape", "eyedropper"].every(
+          (name) => editor.querySelector(`[data-tool=${name}]`).hidden,
+        ),
+      );
+      editor.querySelector("[data-close]").click();
+      await openImageEditor(
+        maskProject.assets.src,
+        () => {},
+        "brush",
+        undefined,
+        {
+          adjustments: maskLayer.adjustments,
+          masked: true,
+        },
+      );
+      check(
+        "pixel workshop shows its own mode and hides mask views",
+        !editor.classList.contains("mask-mode") &&
+          editor.querySelector("[data-mask-view-options]").hidden &&
+          /original kept/.test(
+            editor.querySelector("[data-mode-badge]").textContent,
+          ) &&
+          editorCanvas.style.filter.startsWith("url(") &&
+          pixel(editorCanvas, 400, 160)[1] === 176,
+      );
+      for (const name of ["bucket", "gradient", "shape", "eyedropper"])
+        editor.querySelector(`[data-tool=${name}]`).click();
+      check(
+        "new tools are restored after switching from mask to pixels",
+        editor
+          .querySelector('[data-tool="eyedropper"]')
+          .getAttribute("aria-pressed") === "true" &&
+          !editor.querySelector('[data-tool="bucket"]').hidden,
+      );
+      const oldColor = editor.querySelector("[data-color]").value;
+      const oldBackground = editor.querySelector(
+        "[data-background-color]",
+      ).value;
+      editor.querySelector("[data-swap]").click();
+      check(
+        "foreground and background swap together",
+        editor.querySelector("[data-color]").value === oldBackground &&
+          editor.querySelector("[data-background-color]").value === oldColor,
+      );
+      editor.querySelector("[data-close]").click();
+      let copyRequested = false;
+      await openImageEditor(project.assets.test, (asset, ops, asNewLayer) => {
+        copyRequested =
+          asNewLayer === true && ops.length === 0 && asset.width === 512;
+      });
+      const fitted = editorCanvas.getBoundingClientRect();
+      check(
+        "fit preview retains pixel aspect ratio for accurate drawing coordinates",
+        Math.abs(fitted.width / fitted.height - 512 / 320) < 0.01,
+      );
+      editor.querySelector("[data-save-copy]").click();
+      check(
+        "keep as new layer signals a copy without requiring destructive edits",
+        copyRequested && !editor.open,
+      );
+      document.querySelector("#open-mask").onclick = () =>
+        openImageEditor(
+          project.assets.test,
+          (asset) => {
+            maskAsset = { id: "mask", ...asset };
+            document.querySelector("#saved").textContent =
+              `Mask saved ${asset.width} x ${asset.height}; source unchanged`;
+            document.querySelector("#output").src = asset.data;
+          },
+          "erase",
+          { mask: maskAsset },
+        );
+      document.querySelector("#result").textContent = failures
+        ? `${failures} checks failed`
+        : `All ${document.querySelectorAll("#checks li").length} pixel checks passed`;
+      document.querySelector("#open").onclick = () =>
+        openImageEditor(project.assets.test, (asset) => {
+          document.querySelector("#saved").textContent =
+            `Saved ${asset.width} × ${asset.height} pixels`;
+          document.querySelector("#output").src = asset.data;
+        });
+    </script>
+  </body>
+</html>

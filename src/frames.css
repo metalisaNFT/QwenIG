@@ -1,0 +1,333 @@
+/* Animation cards (Animate tab) ---------------------------------------------------------- */
+.sprite-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.sprite-head b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sprite-head small {
+  margin-left: auto;
+  flex: none;
+  color: var(--muted);
+  font-size: 9.5px;
+}
+.sprite-card .sprite-preview {
+  cursor: pointer;
+}
+.sprite-actions {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 6px;
+  margin-top: 12px;
+}
+.sprite-actions .primary {
+  padding: 9px 10px;
+}
+.sprite-card .sprite-actions .danger {
+  margin-top: 0;
+}
+
+/* Glitch controls (shared) --------------------------------------------------------------- */
+.glitch-editor {
+  display: grid;
+  gap: 10px;
+}
+.glitch-presets {
+  flex-wrap: wrap;
+}
+.glitch-stack {
+  display: grid;
+  gap: 6px;
+}
+.glitch-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) 26px 26px;
+  align-items: center;
+  gap: 8px;
+}
+.glitch-row select {
+  margin: 0 !important;
+  padding: 6px 8px;
+  font-size: 11px;
+}
+.glitch-row input[type="range"] {
+  padding: 0;
+  margin: 0;
+  border: 0;
+  accent-color: var(--accent);
+}
+.glitch-row output {
+  font-size: 10px;
+  color: var(--muted);
+  text-align: right;
+}
+.glitch-row button {
+  padding: 4px 0 !important;
+}
+.glitch-seed {
+  align-items: center;
+  flex-wrap: wrap;
+  row-gap: 6px;
+}
+.glitch-seed button {
+  white-space: nowrap;
+}
+.glitch-seed label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+.glitch-seed input {
+  width: 84px;
+  margin: 0;
+  padding: 6px 8px;
+}
+.glitch-card > summary {
+  list-style: none;
+  cursor: pointer;
+}
+.glitch-card > summary::-webkit-details-marker {
+  display: none;
+}
+.glitch-card {
+  border-left: 3px solid #ef7aa5;
+}
+.glitch-preview {
+  display: block;
+  max-width: 100%;
+  max-height: 260px;
+  margin: 10px auto 12px;
+  border-radius: 6px;
+  cursor: zoom-in;
+  background: repeating-conic-gradient(#232822 0% 25%, #1b1f1a 0% 50%) 50% / 14px 14px;
+}
+.glitch-preview:active {
+  cursor: zoom-out;
+}
+.glitch-card .ai-row {
+  margin-top: 8px;
+}
+.glitch-card > .card-heading:not(summary) {
+  margin-top: 18px;
+  padding-top: 12px;
+  border-top: 1px solid #ffffff10;
+}
+.glitch-card .ai-row > * {
+  flex: 1;
+}
+.glitch-card select {
+  width: 100%;
+}
+
+/* Frame editor -------------------------------------------------------------------------- */
+.frame-editor {
+  width: min(1400px, 96vw);
+  height: min(900px, 94vh);
+  max-width: none;
+  max-height: none;
+  padding: 0;
+  overflow: hidden;
+}
+.frame-editor[open] {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+.fe-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+}
+.fe-header #fe-name {
+  width: 260px;
+  margin: 0;
+  padding: 7px 10px;
+  font-weight: 600;
+}
+.fe-inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.fe-inline input {
+  width: 64px;
+  margin: 0;
+  padding: 6px 8px;
+}
+.fe-spacer {
+  flex: 1;
+}
+.fe-header .primary {
+  padding: 8px 16px;
+}
+.fe-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 330px;
+  min-height: 0;
+}
+.fe-stage {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  min-height: 0;
+  background: #151815;
+}
+.fe-stage-box {
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  padding: 18px;
+  overflow: hidden;
+}
+.fe-stage-canvas {
+  max-width: 100%;
+  max-height: 100%;
+  min-width: 96px;
+  min-height: 96px;
+  object-fit: contain;
+  border-radius: 6px;
+  background: repeating-conic-gradient(#262b25 0% 25%, #1d211c 0% 50%) 50% / 18px 18px;
+  box-shadow: 0 10px 40px #0007;
+}
+.fe-stage-canvas.crisp {
+  image-rendering: pixelated;
+}
+.fe-transport {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--line);
+}
+.fe-transport #fe-play {
+  min-width: 92px;
+}
+.fe-counter {
+  min-width: 64px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+.fe-transport .check {
+  margin: 0 0 0 10px;
+}
+.fe-side {
+  border-left: 1px solid var(--line);
+  overflow: auto;
+  padding: 0 16px 18px;
+  scrollbar-width: thin;
+}
+.fe-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  margin: 0 -16px 14px;
+  padding: 0 8px;
+  background: #232b20;
+  border-bottom: 1px solid var(--line);
+}
+.fe-tab {
+  flex: 1;
+  padding: 13px 2px 11px;
+  background: transparent;
+  color: #91a085;
+  font-size: 11.5px;
+  border-bottom: 2px solid transparent;
+}
+.fe-tab.active {
+  color: #dae9cc;
+  border-bottom-color: var(--accent);
+}
+.fe-pane {
+  display: grid;
+  gap: 8px;
+}
+.fe-pane .card-heading {
+  margin-top: 10px;
+}
+.fe-pane .selection-actions {
+  margin: 0;
+}
+.fe-pane .ai-row {
+  align-items: flex-end;
+}
+.fe-pane .ai-row label {
+  flex: 1;
+}
+.fe-pane select,
+.fe-pane label input:not([type="checkbox"]):not([type="range"]) {
+  width: 100%;
+  margin-top: 6px;
+}
+.fe-pane .primary.full {
+  margin-top: 4px;
+}
+.fe-timeline {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 12px 16px 14px;
+  border-top: 1px solid var(--line);
+  background: #1b1e1a;
+  scrollbar-width: thin;
+}
+.fe-frame {
+  position: relative;
+  flex: none;
+  width: 86px;
+  padding: 4px;
+  border: 1px solid #3d453a;
+  border-radius: 7px;
+  background: #20241f;
+  text-align: left;
+}
+.fe-frame img {
+  display: block;
+  width: 76px;
+  height: 64px;
+  object-fit: contain;
+  border-radius: 4px;
+  background: repeating-conic-gradient(#262b25 0% 25%, #1d211c 0% 50%) 50% / 10px 10px;
+  pointer-events: none;
+}
+.fe-frame-meta {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  font-size: 9.5px;
+}
+.fe-frame-meta small {
+  color: var(--muted);
+}
+.fe-frame.selected {
+  border-color: #6f8c56;
+  background: #2c3726;
+}
+.fe-frame.current {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.fe-frame.drop-before {
+  box-shadow: -4px 0 0 var(--accent);
+}
+.fe-frame.drop-after {
+  box-shadow: 4px 0 0 var(--accent);
+}
+@media (max-width: 900px) {
+  .fe-body {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(220px, 1fr) minmax(0, 1fr);
+  }
+  .fe-side {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+  .fe-header #fe-name {
+    width: 140px;
+  }
+}
